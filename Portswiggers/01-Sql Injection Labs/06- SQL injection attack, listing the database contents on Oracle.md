@@ -53,14 +53,6 @@ Also, Oracle doesn’t have `information_schema`. Instead it has:
 - `all_tab_columns` → list columns
 - `dual` → a fake 1‑row table for queries that require FROM
 
-The plan:
-
-1. Confirm injection
-2. Find number of columns
-3. List tables
-4. List columns of target table
-5. Extract creds
-6. Log in
 
 ---
 
@@ -144,6 +136,11 @@ ivmo56ozoenkwimgqraf
 ```
 
 Full win.
+
+Screenshot:
+
+<img width="1194" height="288" alt="image" src="https://github.com/user-attachments/assets/dad936e3-4f9c-4da1-abd3-6781638084ca" />
+
 
 ---
 
