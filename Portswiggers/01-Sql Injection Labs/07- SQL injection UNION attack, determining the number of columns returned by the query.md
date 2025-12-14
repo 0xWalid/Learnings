@@ -93,6 +93,9 @@ Pets' UNION SELECT NULL,NULL,NULL--
 - Internal Server Error disappeared.
 - Page loaded successfully.
 - Lab completion animation appeared.
+- Screenshot:
+      <img width="1232" height="301" alt="image" src="https://github.com/user-attachments/assets/18ee563d-a457-4017-9c60-00ea4cc29db4" />
+
 
 **Conclusion:**
 
